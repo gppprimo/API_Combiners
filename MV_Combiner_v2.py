@@ -1,6 +1,8 @@
 import os
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
 import matplotlib.pylab as plot
+import random
+import numpy as np
 
 folder_names = {"output_ML_GNB": "gaussian_naive_bayes", "output_ML_DT": "decision_tree",
                 "output_ML_RF": "taylor2016appscanner_RF"}
@@ -92,23 +94,58 @@ def prepare_combiner_input():
 def majority_voting_combiner():
     inp = prepare_combiner_input()
     print("majority voting: iniziato")
-    with open("output_combine.txt", 'a') as f:  # risolvere bug qui
-        print(str(len(inp[0])) + " " + str(len(inp[1])) + " " + str(len(inp[2])))
-        for i in range(min(len(inp[0]), len(inp[1]), len(inp[2]))):
+    with open("output_combine.txt", 'a') as f:
+        for i in range(len(inp[0])):
             gnb_i = inp[0][i]
             dt_i = inp[1][i]
             rf_i = inp[2][i]
 
             if rf_i != dt_i and rf_i == gnb_i:
                 f.write(rf_i)
+            elif rf_i != gnb_i and rf_i == dt_i:
+                f.write(dt_i)
+            elif rf_i != gnb_i and gnb_i == dt_i:
+                f.write(dt_i)
             else:
-                f.write(dt_i)  # il decision tree è il classificatore con migliori performance
+                f.write(random.choice([gnb_i, dt_i, rf_i]))  # tie-breaking rule
     f.close()
     print("majority voting: completato")
 
 
+def get_confusion_matrix(ground_truth, predictions):
+    cm = confusion_matrix(ground_truth, predictions, list(label_classes.keys()))
+    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] # normalizziamo
+    print(cm)
+    fig, ax = plot.subplots() #impostazioni varie per il plot
+    im = ax.imshow(cm, interpolation='nearest', cmap=plot.cm.Blues)
+    ax.figure.colorbar(im, ax=ax)
+    # We want to show all ticks...
+    ax.set(xticks=np.arange(cm.shape[1]),
+           yticks=np.arange(cm.shape[0]),
+           # ... and label them with the respective list entries
+           xticklabels=list(label_classes.values()), yticklabels=list(label_classes.values()),
+           title="Normalized Confusion Matrix",
+           ylabel='True',
+           xlabel='Predicted')
+
+    # Rotate the tick labels and set their alignment.
+    plot.setp(ax.get_xticklabels(), rotation=45, ha="right",
+              rotation_mode="anchor")
+
+    # Loop over data dimensions and create text annotations.
+    fmt = '.2f'
+    thresh = cm.max() / 2.
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], fmt),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
+    fig.tight_layout()
+    return ax
+
+
 # procedura che restituisce la confusion matrix
-def get_confusion_matrix():
+def performance_measures():
     ground_truth = []
     predictions = []
     f = open("ground_truth.txt")
@@ -121,25 +158,19 @@ def get_confusion_matrix():
     lines = f.readlines()
     for line in lines:
         predictions.append(int(line.strip().split()[0]))
-    matrix = confusion_matrix(ground_truth, predictions, list(label_classes.keys()))
-    print(matrix)
-    fig = plot.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(matrix)
-    plot.title('Confusion matrix of the classifier')
-    fig.colorbar(cax)
-    ax.set_xticklabels([''] + list(label_classes.values()))
-    ax.set_yticklabels([''] + list(label_classes.values()))
-    plot.xlabel('Predicted')
-    plot.ylabel('True')
+
+    get_confusion_matrix(ground_truth, predictions)
     plot.show()
+
+    print("Accuracy score: ", accuracy_score(ground_truth, predictions))
+    print(classification_report(ground_truth, predictions))
 
 
 def main():
-    # prepare_ground_truth()
-    # merge_fold_predictions()
-    # majority_voting_combiner()
-    get_confusion_matrix()
+    prepare_ground_truth()
+    merge_fold_predictions()
+    majority_voting_combiner()
+    performance_measures()
 
 
 if __name__ == '__main__':
