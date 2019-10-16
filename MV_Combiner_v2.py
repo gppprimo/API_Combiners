@@ -112,6 +112,7 @@ def majority_voting_combiner():
     print("majority voting: completato")
 
 
+# procedura che calcola la confusion matrix, la normalizza e imposta i parametri per il plot
 def get_confusion_matrix(ground_truth, predictions):
     cm = confusion_matrix(ground_truth, predictions, list(label_classes.keys()))
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] # normalizziamo
@@ -144,7 +145,7 @@ def get_confusion_matrix(ground_truth, predictions):
     return ax
 
 
-# procedura che restituisce la confusion matrix
+# procedura che restituisce un plot della confusion matrix e le misure di performance
 def performance_measures():
     ground_truth = []
     predictions = []
