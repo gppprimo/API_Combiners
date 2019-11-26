@@ -29,6 +29,8 @@ label_classes = {
 }
 
 
+# funzione che costruisce il ground_truth utilizzato per il calcolo
+# delle performance del classificatore
 def prepare_ground_truth():
     for i in range(1, 11, 1):
         ground_truth = []
@@ -47,7 +49,7 @@ def prepare_ground_truth():
         else:
             print("Path " + path + folder[0] + path_to_file + str(i) + " non existent")
 
-
+# merging dei file di interesse dei diversi fold dei singoli classificatori
 def merge_fold_predictions():
     for k in range(0, 3, 1):  # per ogni cartella di output dei classificatori (#3)
         predictions = []  # inizializza la colonna da leggere
@@ -71,7 +73,7 @@ def merge_fold_predictions():
             else:
                 print("Path " + path + folders[k] + path_to_file + str(i) + " non existent")
 
-
+# funzione che crea l'input da dare al combiner
 def prepare_combiner_input():
     RF_input = []
     DT_input = []
