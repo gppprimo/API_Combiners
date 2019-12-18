@@ -1,16 +1,22 @@
 import os
+
+import numpy
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
 import matplotlib.pylab as plot
 import random
+import pickle
 import numpy as np
+from Classifiers import taylor2016appscanner_RF, decision_tree, gaussian_naive_bayes
 
 folder_names = {"output_ML_GNB": "gaussian_naive_bayes", "output_ML_DT": "decision_tree",
                 "output_ML_RF": "taylor2016appscanner_RF"}
 folds_number = 10
-path = "./Data/"
+path = "../"
 path_to_file = "/predictions/fold_"
 combiner_input_file_names = ["combined_input_gaussian_naive_bayes.txt", "combined_input_decision_tree.txt",
                              "combined_input_taylor2016appscanner_RF.txt"]
+path_to_pickle = "CICIDS2017_corrected_76.pickle"
 
 label_classes = {
     0: 'BENIGN',
@@ -45,6 +51,7 @@ def prepare_ground_truth():
             with open("ground_truth.txt", 'a') as f:  # creo il nuovo file
                 for j in ground_truth:
                     f.write(str(j) + '\n')
+            print(len(ground_truth))
             f.close()
         else:
             print("Path " + path + folder[0] + path_to_file + str(i) + " non existent")
@@ -87,10 +94,18 @@ def prepare_combiner_input():
             lines = f.readlines()
             for line in lines:
                 combiner_input[i].append(line)
-            print(len(combiner_input[i]))
 
     print("generazione input completato")
     return combiner_input
+
+
+def dataset_deserialized():
+    samples_list = []
+    categorical_labels_list = []
+    with open(path + path_to_pickle, 'rb') as pickle_dataset_file:
+            samples_list.append(pickle.load(pickle_dataset_file))
+            categorical_labels_list.append(pickle.load(pickle_dataset_file))
+    return samples_list, categorical_labels_list
 
 
 def majority_voting_combiner():
@@ -112,6 +127,33 @@ def majority_voting_combiner():
                 f.write(random.choice([gnb_i, dt_i, rf_i]))  # tie-breaking rule
     f.close()
     print("majority voting: completato")
+
+
+    # Ui = Di + |Ii| * ln(L - 1) + sum{Wk}, k from 1 to len(Ii)
+    # L = numero di classi
+    # Ui confidenza della classe i-ima
+    # Ii subset dei classificatori che hanno deciso per la classe i
+    # Di = ln(P(Ci)), P(Ci) probabilita' che la classe i-ima appaia nel Validation Set
+    # Wk = ln(Pk/ (1 - Pk)) peso (accuracy) calcolato dal k-imo classificatore nel Validation Set
+def weighted_majority_voting():
+    samples, categorical_lable_list = dataset_deserialized()
+    kfold = StratifiedKFold(n_splits = 5, shuffle=True, random_state = 124)
+    L = len(label_classes)
+
+    samples = samples[0]
+    categorical_labels = categorical_lable_list[0]
+    for train, test in kfold.split(samples, categorical_labels):
+        samples_train = samples[train]
+        samples_test = samples[test]
+        x_val, x_test, y_val, y_test = train_test_split(samples_test, categorical_labels, test_size = 0.5)
+        # fit a model
+        print(x_val)
+        accuracy_taylor = taylor2016appscanner_RF(x_val, y_val, x_test, y_test)
+        accuracy_NB = gaussian_naive_bayes(x_val, y_val, x_test, y_test)
+        accuracy_DT = decision_tree(x_val, y_val, x_test, y_test)
+
+
+
 
 
 # procedura che calcola la confusion matrix, la normalizza e imposta i parametri per il plot
@@ -170,11 +212,11 @@ def performance_measures():
 
 
 def main():
-    prepare_ground_truth()
-    merge_fold_predictions()
-    majority_voting_combiner()
-    performance_measures()
-
+    #prepare_ground_truth()
+    #merge_fold_predictions()
+    #majority_voting_combiner()
+    #performance_measures()
+    weighted_majority_voting()
 
 if __name__ == '__main__':
     main()
