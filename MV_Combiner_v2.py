@@ -1,5 +1,6 @@
 import os
 
+import sys
 import numpy
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
@@ -12,7 +13,7 @@ from Classifiers import taylor2016appscanner_RF, decision_tree, gaussian_naive_b
 folder_names = {"output_ML_GNB": "gaussian_naive_bayes", "output_ML_DT": "decision_tree",
                 "output_ML_RF": "taylor2016appscanner_RF"}
 folds_number = 10
-path = "../"
+path = "./Data/"
 path_to_file = "/predictions/fold_"
 combiner_input_file_names = ["combined_input_gaussian_naive_bayes.txt", "combined_input_decision_tree.txt",
                              "combined_input_taylor2016appscanner_RF.txt"]
@@ -145,13 +146,17 @@ def weighted_majority_voting():
     for train, test in kfold.split(samples, categorical_labels):
         samples_train = samples[train]
         samples_test = samples[test]
-        x_val, x_test, y_val, y_test = train_test_split(samples_test, categorical_labels, test_size = 0.5)
+        x_train, x_val, y_train, y_val = train_test_split(samples_train, categorical_labels[train], shuffle="True",
+                                                          random_state=124, test_size=0.5)
         # fit a model
-        print(x_val)
-        accuracy_taylor = taylor2016appscanner_RF(x_val, y_val, x_test, y_test)
-        accuracy_NB = gaussian_naive_bayes(x_val, y_val, x_test, y_test)
-        accuracy_DT = decision_tree(x_val, y_val, x_test, y_test)
-
+        numpy.set_printoptions(threshold=sys.maxsize)
+        print(y_val)
+        accuracy_taylor = taylor2016appscanner_RF(x_val, y_val, x_train, y_train)
+        accuracy_nb = gaussian_naive_bayes(x_val, y_val, x_train, y_train)
+        accuracy_dt = decision_tree(x_val, y_val, x_train, y_train)
+        # print(accuracy_taylor)
+        # print(accuracy_nb)
+        # print(accuracy_dt)
 
 
 
