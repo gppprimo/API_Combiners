@@ -1,3 +1,4 @@
+import math
 import os
 
 import sys
@@ -39,30 +40,31 @@ label_classes = {
 # funzione che costruisce il ground_truth utilizzato per il calcolo
 # delle performance del classificatore
 def prepare_ground_truth():
+    folders = list(folder_names.keys())
     for i in range(1, 11, 1):
         ground_truth = []
-        folder = list(folder_names.keys())
-        if os.path.exists(path + folder[0] + path_to_file + str(i)):
-            file_name = folder_names.get(folder[0]) + "_fold_" + str(i) + "_predictions.dat"
-            f = open(path + folder[0] + path_to_file + str(i) + "/" + file_name, "r")
+        if os.path.exists(path + folders[0] + path_to_file + str(i)):
+            file_name = folder_names.get(folders[0]) + "_fold_" + str(i) + "_predictions.dat"
+            f = open(path + folders[0] + path_to_file + str(i) + "/" + file_name, "r")
             dat_content = f.readlines()[1:]
             for line in dat_content:  # skip della prima riga del file che e' una stringa
                 ground_truth.append(line.split()[0])
             f.close()
             with open("ground_truth.txt", 'a') as f:  # creo il nuovo file
-                for j in ground_truth:
-                    f.write(str(j) + '\n')
+                for k in ground_truth:
+                    f.write(str(k) + '\n')
             print(len(ground_truth))
             f.close()
         else:
-            print("Path " + path + folder[0] + path_to_file + str(i) + " non existent")
+            print("Path " + path + folders[0] + path_to_file + str(i) + " non existent")
+
 
 # merging dei file di interesse dei diversi fold dei singoli classificatori
 def merge_fold_predictions():
+    folders = list(folder_names.keys())
     for k in range(0, 3, 1):  # per ogni cartella di output dei classificatori (#3)
         predictions = []  # inizializza la colonna da leggere
         for i in range(1, 11, 1):  # 10 cartelle fold
-            folders = list(folder_names.keys())
             print(folders[k] + " - current folder: " + str(i))
             print(path + folders[k] + path_to_file + str(i))
             if os.path.exists(path + folders[k] + path_to_file + str(i)):  # path all'i-ma cartella fold
@@ -80,6 +82,7 @@ def merge_fold_predictions():
                 predictions = []
             else:
                 print("Path " + path + folders[k] + path_to_file + str(i) + " non existent")
+
 
 # funzione che crea l'input da dare al combiner
 def prepare_combiner_input():
@@ -104,8 +107,8 @@ def dataset_deserialized():
     samples_list = []
     categorical_labels_list = []
     with open(path + path_to_pickle, 'rb') as pickle_dataset_file:
-            samples_list.append(pickle.load(pickle_dataset_file))
-            categorical_labels_list.append(pickle.load(pickle_dataset_file))
+        samples_list.append(pickle.load(pickle_dataset_file))
+        categorical_labels_list.append(pickle.load(pickle_dataset_file))
     return samples_list, categorical_labels_list
 
 
@@ -129,44 +132,103 @@ def majority_voting_combiner():
     f.close()
     print("majority voting: completato")
 
-
     # Ui = Di + |Ii| * ln(L - 1) + sum{Wk}, k from 1 to len(Ii)
     # L = numero di classi
     # Ui confidenza della classe i-ima
     # Ii subset dei classificatori che hanno deciso per la classe i
     # Di = ln(P(Ci)), P(Ci) probabilita' che la classe i-ima appaia nel Validation Set
     # Wk = ln(Pk/ (1 - Pk)) peso (accuracy) calcolato dal k-imo classificatore nel Validation Set
+
+
 def weighted_majority_voting():
     samples, categorical_lable_list = dataset_deserialized()
-    kfold = StratifiedKFold(n_splits = 5, shuffle=True, random_state = 124)
-    L = len(label_classes)
+    kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=124)  # 5_fold cross_validation
+    num_classes = len(label_classes)
+    log_classes: float = math.log(num_classes - 1)  # calcolo ln(L-1) che è costante
+    fold_count = 1
 
     samples = samples[0]
     categorical_labels = categorical_lable_list[0]
     for train, test in kfold.split(samples, categorical_labels):
         samples_train = samples[train]
         samples_test = samples[test]
+        # split del training set in train e validation sets
         x_train, x_val, y_train, y_val = train_test_split(samples_train, categorical_labels[train], shuffle="True",
                                                           random_state=124, test_size=0.5)
-        # fit a model
-        numpy.set_printoptions(threshold=sys.maxsize)
-        print(y_val)
-        accuracy_taylor = taylor2016appscanner_RF(x_val, y_val, x_train, y_train)
-        accuracy_nb = gaussian_naive_bayes(x_val, y_val, x_train, y_train)
-        accuracy_dt = decision_tree(x_val, y_val, x_train, y_train)
-        # print(accuracy_taylor)
-        # print(accuracy_nb)
-        # print(accuracy_dt)
 
+        occurrences_prob = []
+        # calcolo di Di = log(P(Ci))
+        for z in range(0, num_classes, 1):  # per ogni classe
+            occurrences_prob.append(np.count_nonzero(y_val == z))  # Ci vedi il numero di occorrenze della classe i
+            occurrences_prob[z] = occurrences_prob[z] / len(
+                y_val)  # P(Ci) rapporta il valore trovato con la dimensione del validation set
+            occurrences_prob[z] = math.log(occurrences_prob[z])  # calcolo log(P(Ci))
 
+        predict_rf = []
+        predict_nb = []
+        predict_dt = []
+        # calcolo predizioni e valori di accuratezza sul validation set x i tre classificatori
+        predict_rf, accuracy_rf = taylor2016appscanner_RF(x_val, y_val, x_train, y_train)
+        predict_nb, accuracy_nb = gaussian_naive_bayes(x_val, y_val, x_train, y_train)
+        predict_dt, accuracy_dt = decision_tree(x_val, y_val, x_train, y_train)
+
+        print(accuracy_rf)
+        print(accuracy_nb)
+        print(accuracy_dt)
+
+        weights = []
+        # calcolo dei pesi Wi = log(pk/(1-pk)) dove pk è l'accuracy del k-esimo classificatore
+        w_rf = math.log(accuracy_rf / (1 - accuracy_rf))
+
+        w_nb = math.log(accuracy_nb / (1 - accuracy_nb))
+
+        w_dt = math.log(accuracy_dt / (1 - accuracy_dt))
+
+        weights.append(w_rf)
+        weights.append(w_nb)
+        weights.append(w_dt)
+
+        predictions = []
+        confidence = []
+        decision = []
+        sub_classes = 0
+
+        print(len(predict_dt))
+        for i in range(0, len(predict_dt), 1):  # per ogni riga di predizioni
+            predictions.append(predict_rf[i])  # preleviamone la i-esima per tutti i classificatori
+            predictions.append(predict_nb[i])
+            predictions.append(predict_dt[i])
+            for j in range(0, num_classes, 1):  # per ogni classe
+                confidence.append(
+                    occurrences_prob[j])  # sommiamo la probabilità di occorrenza della classe j alla confidence
+                for p in range(0, 3, 1):  # per ogni classificatore
+                    if predictions[p] == j:  # se il classificatore ha predetto la classe j
+                        confidence[j] += weights[p]  # aggiungiamo il peso
+                        sub_classes += 1  # incrementiamo la dimensione del sotto-set di classificatori che hanno scelto per la classe j
+                confidence[j] += sub_classes * log_classes  # aggiungiamo |Ii|*log(L-1)
+            wmv = [q for q, x in enumerate(confidence) if
+                   x == max(confidence)]  # troviamo gli indici con valore massimo
+            if len(wmv) > 1:  # se ne abbiamo più di uno
+                decision.append(random.choice(wmv))  # tie - breaking rule
+            else:
+                decision.append(wmv)
+            predictions = []  # puliamo le liste e parametri
+            confidence = []
+            sub_classes = 0
+        with open("fold_" + str(fold_count) + "_predictions_wmv.txt", 'a') as f:  # creo il nuovo file
+            for k in decision:
+                f.write(str(k[0]) + '\n')  # metto le decisioni prese dal wmv
+        print(len(decision))
+        f.close()
+        fold_count += 1
 
 
 # procedura che calcola la confusion matrix, la normalizza e imposta i parametri per il plot
 def get_confusion_matrix(ground_truth, predictions):
     cm = confusion_matrix(ground_truth, predictions, list(label_classes.keys()))
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] # normalizziamo
+    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]  # normalizziamo
     print(cm)
-    fig, ax = plot.subplots() #impostazioni varie per il plot
+    fig, ax = plot.subplots()  # impostazioni varie per il plot
     im = ax.imshow(cm, interpolation='nearest', cmap=plot.cm.Blues)
     ax.figure.colorbar(im, ax=ax)
     # We want to show all ticks...
@@ -217,11 +279,12 @@ def performance_measures():
 
 
 def main():
-    #prepare_ground_truth()
-    #merge_fold_predictions()
-    #majority_voting_combiner()
-    #performance_measures()
+    # prepare_ground_truth()
+    # merge_fold_predictions()
+    # majority_voting_combiner()
+    # performance_measures()
     weighted_majority_voting()
+
 
 if __name__ == '__main__':
     main()
