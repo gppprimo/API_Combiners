@@ -31,8 +31,9 @@ def majority_voting_combiner():
 def weighted_majority_voting():
 
     # Ui = Di + |Ii| * ln(L - 1) + sum{Wk}, k from 1 to len(Ii)
-    # L = numero di classi
+
     # Ui confidenza della classe i-ima
+    # L = numero di classi
     # Ii subset dei classificatori che hanno deciso per la classe i
     # Di = ln(P(Ci)), P(Ci) probabilita' che la classe i-ima appaia nel Validation Set
     # Wk = ln(Pk/ (1 - Pk)) peso (accuracy) calcolato dal k-imo classificatore nel Validation Set
