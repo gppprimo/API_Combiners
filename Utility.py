@@ -1,8 +1,14 @@
 import os
 import pickle
 import matplotlib.pylab as plot
+import errno
+import os
+import sys
+import traceback
+import numpy as np
 from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
 from Constants import *
+
 
 # funzione che costruisce il ground_truth utilizzato per il calcolo
 # delle performance del classificatore
@@ -24,6 +30,7 @@ def prepare_ground_truth():
             f.close()
         else:
             print("Path " + path + folders[0] + path_to_file + str(i) + " non existent")
+
 
 # merging dei file di interesse dei diversi fold dei singoli classificatori
 def merge_fold_predictions():
@@ -69,13 +76,14 @@ def prepare_combiner_input():
     return combiner_input
 
 
-def dataset_deserialized():
+def dataset_deserialization():
     samples_list = []
     categorical_labels_list = []
     with open(path + path_to_pickle, 'rb') as pickle_dataset_file:
         samples_list.append(pickle.load(pickle_dataset_file))
         categorical_labels_list.append(pickle.load(pickle_dataset_file))
     return samples_list, categorical_labels_list
+
 
 # procedura che calcola la confusion matrix, la normalizza e imposta i parametri per il plot
 def get_confusion_matrix(ground_truth, predictions):
@@ -130,3 +138,19 @@ def performance_measures():
 
     print("Accuracy score: ", accuracy_score(ground_truth, predictions))
     print(classification_report(ground_truth, predictions))
+
+
+def write_predictions(categorical_labels_test, predictions, dl_model, current_fold):
+
+    try:
+        os.makedirs('./predictions/fold_%d' % current_fold)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            traceback.print_exc(file=sys.stderr)
+
+    predictions_filename = './predictions/fold_%d/%s_fold_%d_predictions.dat' % (
+        current_fold, dl_model, current_fold)
+    with open(predictions_filename, 'w') as predictions_file:
+        predictions_file.write('Actual\t%s\n' % dl_model)
+        for i, prediction in enumerate(predictions):
+            predictions_file.write('%s\t%s\n' % (categorical_labels_test[i], prediction[0]))

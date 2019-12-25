@@ -3,53 +3,58 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 
 
-def taylor2016appscanner_RF(x_val, y_val, x_train, y_train):
-
+def taylor2016appscanner_RF(x_val, y_val, x_train, y_train, samples_test, categorical_labels_test):
     # estimators_number = 150
-    estimators_number = 50
+    estimators_number = 5
 
     # Define RF classifier with parameters specified in taylor2016appcanner
     clf = RandomForestClassifier(criterion='gini', max_features='sqrt', n_estimators=estimators_number)
 
-    # Training phase
+    # Training & validation phase
     clf.fit(x_train, y_train)
 
-    predictions = clf.predict(x_val)
+    val_predictions = clf.predict(x_val)
 
-    # Test with predict_classes: test_model(model, transformed_samples_test, categorical_labels_test)
-    accuracy = sklearn.metrics.accuracy_score(y_val, predictions)
+    accuracy = sklearn.metrics.accuracy_score(y_val, val_predictions)
+
+    # Test phase
+    predictions = clf.predict(samples_test)
 
     return predictions, accuracy
 
 
-def decision_tree(x_val, y_val, x_train, y_train):
-
-    # Define RF classifier with parameters specified in taylor2016appcanner
+def decision_tree(x_val, y_val, x_train, y_train, samples_test, categorical_labels_test):
+    # Define DT classifier
     clf = sklearn.tree.DecisionTreeClassifier()
 
-    # Training phase
+    # Training & validation phase
     clf.fit(x_train, y_train)
 
-    predictions = clf.predict(x_val)
+    val_predictions = clf.predict(x_val)
 
-    # Test with predict_classes: test_model(model, transformed_samples_test, categorical_labels_test)
-    accuracy = sklearn.metrics.accuracy_score(y_val, predictions)
+    accuracy = sklearn.metrics.accuracy_score(y_val, val_predictions)
+
+    # Test phase
+    predictions = clf.predict(samples_test)
 
     return predictions, accuracy
 
 
-def gaussian_naive_bayes(x_val, y_val, x_train, y_train):
-
-    # Define RF classifier with parameters specified in taylor2016appcanner
+def gaussian_naive_bayes(x_val, y_val, x_train, y_train, samples_test, categorical_labels_test):
+    # Define NB classifier
     clf = GaussianNB()
 
-    # Training phase
+    # Training & validation phase
     clf.fit(x_train, y_train)
 
-    predictions = clf.predict(x_val)
+    val_predictions = clf.predict(x_val)
 
-    # Test with predict_classes: test_model(model, transformed_samples_test, categorical_labels_test)
-    accuracy = sklearn.metrics.accuracy_score(y_val, predictions)
+    accuracy = sklearn.metrics.accuracy_score(y_val, val_predictions)
+
+    # Test phase
+    predictions = clf.predict(samples_test)
 
     return predictions, accuracy
+
+
 

@@ -8,12 +8,12 @@ from Utility import *
 
 def majority_voting_combiner():
     print("majority voting: iniziato")
-    input = prepare_combiner_input()
+    inp = prepare_combiner_input()
     with open("output_combine.txt", 'a') as f:
-        for i in range(len(input[0])):
-            gnb_i = input[0][i]
-            dt_i = input[1][i]
-            rf_i = input[2][i]
+        for i in range(len(inp[0])):
+            gnb_i = inp[0][i]
+            dt_i = inp[1][i]
+            rf_i = inp[2][i]
 
             if rf_i != dt_i and rf_i == gnb_i:
                 f.write(rf_i)
@@ -41,16 +41,18 @@ def weighted_majority_voting():
     log_classes: float = math.log(num_classes - 1)  # calcolo ln(L-1) che è costante
     fold_count = 1
 
-    samples, categorical_lable_list = dataset_deserialized()
+    samples, categorical_lable_list = dataset_deserialization()
     samples = samples[0]
     categorical_labels = categorical_lable_list[0]
     kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=124)  # 5_fold cross_validation
+    # con 5 split, la dimensione del test_set è il 20% del totale
     for train_idx, test_idx in kfold.split(samples, categorical_labels):
         samples_train = samples[train_idx]
         samples_test = samples[test_idx]
         # split del training set in train e validation sets
+        # test_size = 0.25 in modo che il validation set sia delle stesse dimensioni del test set
         x_train, x_val, y_train, y_val = train_test_split(samples_train, categorical_labels[train_idx], shuffle="True",
-                                                          random_state=124, test_size=0.5)
+                                                          random_state=124, test_size=0.25)
 
         occurrences_prob = []
 
@@ -66,9 +68,12 @@ def weighted_majority_voting():
         predict_dt = []
 
         # calcolo predizioni e valori di accuratezza sul validation set x i tre classificatori
-        predict_rf, accuracy_rf = taylor2016appscanner_RF(x_val, y_val, x_train, y_train)
-        predict_nb, accuracy_nb = gaussian_naive_bayes(x_val, y_val, x_train, y_train)
-        predict_dt, accuracy_dt = decision_tree(x_val, y_val, x_train, y_train)
+        predict_rf, accuracy_rf = taylor2016appscanner_RF(x_val, y_val, x_train, y_train,
+                                                          samples_test, categorical_labels[test_idx])
+        predict_nb, accuracy_nb = gaussian_naive_bayes(x_val, y_val, x_train, y_train,
+                                                       samples_test, categorical_labels[test_idx])
+        predict_dt, accuracy_dt = decision_tree(x_val, y_val, x_train, y_train,
+                                                samples_test, categorical_labels[test_idx])
 
         print(accuracy_rf)
         print(accuracy_nb)
@@ -86,7 +91,7 @@ def weighted_majority_voting():
 
         predictions = []
         confidence = []
-        decision = []
+        decisions = []
         sub_classes = 0
 
         for i in range(0, len(predict_dt), 1):  # per ogni riga di predizioni
@@ -105,18 +110,15 @@ def weighted_majority_voting():
             wmv = [q for q, x in enumerate(confidence) if
                    x == max(confidence)]  # troviamo gli indici con valore massimo
             if len(wmv) > 1:  # se ne abbiamo più di uno
-                decision.append(random.choice(wmv))  # tie - breaking rule
+                decisions.append(random.choice(wmv))  # tie - breaking rule
             else:
-                decision.append(wmv)
+                decisions.append(wmv)
             predictions = []  # puliamo le liste e parametri
             confidence = []
             sub_classes = 0
-        with open("fold_" + str(fold_count) + "_predictions_wmv.txt", 'a') as f:  # creo il nuovo file
-            for k in decision:
-                f.write(str(k[0]) + '\n')  # metto le decisioni prese dal wmv
-        f.close()
+        write_predictions(categorical_labels[test_idx], decisions, "wmv", fold_count) # scrittura predizioni
+        print("Accuracy score fold_" + str(fold_count) + ": ", accuracy_score(categorical_labels[test_idx], decisions))
         fold_count += 1
-
 
 def main():
     # prepare_ground_truth()
