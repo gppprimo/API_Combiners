@@ -2,6 +2,8 @@ import sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 
+from Constants import label_classes
+
 
 def taylor2016appscanner_RF(x_val, y_val, x_train, y_train, samples_test, categorical_labels_test):
     # estimators_number = 150
@@ -17,10 +19,12 @@ def taylor2016appscanner_RF(x_val, y_val, x_train, y_train, samples_test, catego
 
     accuracy = sklearn.metrics.accuracy_score(y_val, val_predictions)
 
+    recalls = sklearn.metrics.recall_score(y_val, val_predictions, average=None)
+
     # Test phase
     predictions = clf.predict(samples_test)
 
-    return predictions, accuracy
+    return predictions, accuracy, recalls
 
 
 def decision_tree(x_val, y_val, x_train, y_train, samples_test, categorical_labels_test):
@@ -34,10 +38,12 @@ def decision_tree(x_val, y_val, x_train, y_train, samples_test, categorical_labe
 
     accuracy = sklearn.metrics.accuracy_score(y_val, val_predictions)
 
+    recalls = sklearn.metrics.recall_score(y_val, val_predictions, average=None)
+
     # Test phase
     predictions = clf.predict(samples_test)
 
-    return predictions, accuracy
+    return predictions, accuracy, recalls
 
 
 def gaussian_naive_bayes(x_val, y_val, x_train, y_train, samples_test, categorical_labels_test):
@@ -51,10 +57,12 @@ def gaussian_naive_bayes(x_val, y_val, x_train, y_train, samples_test, categoric
 
     accuracy = sklearn.metrics.accuracy_score(y_val, val_predictions)
 
+    recalls = sklearn.metrics.recall_score(y_val, val_predictions, average=None)
+
     # Test phase
     predictions = clf.predict(samples_test)
 
-    return predictions, accuracy
+    return predictions, accuracy, recalls
 
 
 
