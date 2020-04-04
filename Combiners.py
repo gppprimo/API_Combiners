@@ -38,8 +38,8 @@ def weighted_majority_voting():
     # Di = ln(P(Ci)), P(Ci) probabilita' che la classe i-ima appaia nel Validation Set
     # Wk = ln(Pk/ (1 - Pk)) peso (accuracy) calcolato dal k-imo classificatore nel Validation Set
 
-    num_classes = len(label_classes)
-    log_classes: float = math.log(num_classes - 1)  # calcolo ln(L-1) che è costante
+    num_classes = len(label_classes)    # L
+    log_classes: float = math.log(num_classes - 1)  # ln(L-1)
     fold_count = 1
 
     samples, categorical_lable_list = dataset_deserialization()
@@ -68,7 +68,7 @@ def weighted_majority_voting():
         predict_nb = []
         predict_dt = []
 
-        # calcolo predizioni e valori di accuratezza sul validation set x i tre classificatori
+        # calcolo predizioni e valori di accuratezza sul validation set per i tre classificatori
         predict_rf, accuracy_rf = taylor2016appscanner_RF(x_val, y_val, x_train, y_train,
                                                           samples_test, categorical_labels[test_idx])
         predict_nb, accuracy_nb = gaussian_naive_bayes(x_val, y_val, x_train, y_train,
@@ -254,7 +254,6 @@ def main():
     # prepare_ground_truth()
     # merge_fold_predictions()
     # majority_voting_combiner()
-    # performance_measures()
     # weighted_majority_voting()
     recall_combiner()
 
